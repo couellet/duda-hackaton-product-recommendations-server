@@ -1,11 +1,34 @@
 import { VercelPoolClient, sql } from "@vercel/postgres";
 
 export interface ProductPurchaseService {
+    getByProductId: (productId: string) => Promise<ProductPurchase[]>;
     insert: (db: VercelPoolClient, productPurchase: ProductPurchase) => Promise<void>;
     exists: (orderId: string, productId: string) => Promise<boolean>;
 }
 
 export const productPurchase: ProductPurchaseService = {
+    getByProductId: async(productId: string) => {
+        const results = await sql`SELECT *FROM product_purchases WHERE product_id=${productId}`;
+        return results.rows.map<ProductPurchase>(row => {
+            return {
+                productId: row['product_id'],
+                orderId: row['order_id'],
+                email: row['email'],
+                invoiceNumber: row['invoice_number'],
+                id: row['id'],
+                created: row['created'],
+                currency: row['currency'],
+                productInternalId: row['internal_id'],
+                variationId: row['variation_id'],
+                name: row['name'],
+                total: parseFloat(row['total']),
+                quantity: row['quantity'],
+                unitPrice: parseFloat(row['unit_price']),
+                sku: row['sku'],
+                image: row['image']
+            };
+        });
+    },
     exists: async (orderId: string, productInternalId: string) => {
         const result = await sql`SELECT * FROM product_purchases WHERE order_id=${orderId} AND internal_id=${productInternalId}`;
         return result.rowCount > 0;
