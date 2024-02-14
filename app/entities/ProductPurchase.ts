@@ -1,32 +1,12 @@
 import { QueryResultRow, VercelPoolClient, sql } from "@vercel/postgres";
-import { productClient } from "./Product";
-import Product from "../interfaces/Product";
+import { dudaProductService } from "./DudaProduct";
+import DudaProduct from "../interfaces/DudaProduct";
 
 export interface ProductPurchaseService {
     getByProductId: (productId: string) => Promise<ProductPurchase[]>;
     insert: (db: VercelPoolClient, productPurchase: ProductPurchase) => Promise<void>;
     exists: (orderId: string, productId: string) => Promise<boolean>;
-    frequentlyPurchasedTogether: (productId: string) => Promise<Product[]>;
-}
-
-function mapProductPurchaseRowToProductPurchase(row: QueryResultRow) : ProductPurchase {
-    return {
-        productId: row['product_id'],
-        orderId: row['order_id'],
-        email: row['email'],
-        invoiceNumber: row['invoice_number'],
-        id: row['id'],
-        created: row['created'],
-        currency: row['currency'],
-        productInternalId: row['internal_id'],
-        variationId: row['variation_id'],
-        name: row['name'],
-        total: parseFloat(row['total']),
-        quantity: row['quantity'],
-        unitPrice: parseFloat(row['unit_price']),
-        sku: row['sku'],
-        image: row['image']
-    };
+    frequentlyPurchasedTogether: (productId: string) => Promise<DudaProduct[]>;
 }
 
 export const productPurchase: ProductPurchaseService = {
@@ -45,14 +25,14 @@ export const productPurchase: ProductPurchaseService = {
         order by occurences desc
         limit 30`;
 
-        const output: Product[] = [];
+        const output: DudaProduct[] = [];
 
         for (const row of results.rows) {
             if (output.length >= 3 || parseInt(row['occurences']) <= 1) break;
 
             console.log('Row score is', row['occurences'])
 
-            const product = await productClient.getProductById(row['product_id']);
+            const product = await dudaProductService.getDudaProductById(row['product_id']);
 
             if (product.status === 'ACTIVE')
                 output.push(product);
@@ -103,6 +83,26 @@ export const productPurchase: ProductPurchaseService = {
         productPurchase.image
         ]);
     }
+}
+
+function mapProductPurchaseRowToProductPurchase(row: QueryResultRow) : ProductPurchase {
+    return {
+        productId: row['product_id'],
+        orderId: row['order_id'],
+        email: row['email'],
+        invoiceNumber: row['invoice_number'],
+        id: row['id'],
+        created: row['created'],
+        currency: row['currency'],
+        productInternalId: row['internal_id'],
+        variationId: row['variation_id'],
+        name: row['name'],
+        total: parseFloat(row['total']),
+        quantity: row['quantity'],
+        unitPrice: parseFloat(row['unit_price']),
+        sku: row['sku'],
+        image: row['image']
+    };
 }
 
 export interface ProductPurchase {
