@@ -3,6 +3,8 @@ import { db } from "@vercel/postgres"
 import { productPurchase } from "@/app/entities/ProductPurchase";
 import DudaResponse from "@/app/interfaces/DudaResponse";
 import { Order } from "@/app/interfaces/Order";
+import { setTimeout } from 'timers/promises';
+
 
 export const dynamic = 'force-dynamic'; // static by default, unless reading the request
 
@@ -11,7 +13,7 @@ export async function GET(request: Request) {
 
   const authToken = btoa(`${process.env.DUDA_API_USERNAME!}:${process.env.DUDA_API_PASSWORD}`);
 
-  const limit = 25;
+  const limit = 50;
   let offset = 0;
   let totalResponses = 0;
 
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
 
     offset += limit;
 
+    await setTimeout(100);
   } while (offset + limit <= totalResponses);
 
   return new Response('OK');
