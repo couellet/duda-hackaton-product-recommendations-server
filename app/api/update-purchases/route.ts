@@ -1,7 +1,8 @@
 import { URL } from "url";
 import { db } from "@vercel/postgres"
 import { productPurchase } from "@/app/entities/ProductPurchase";
-import DudaResponse from "@/app/interfaces/DudaResponse";
+import { getEndpointUrl, getRequestHeaders } from "@/app/entities/DudaClientHelpers";
+import DudaPagedResponse from "@/app/interfaces/DudaResponse";
 import { Order } from "@/app/interfaces/Order";
 import { setTimeout } from 'timers/promises';
 
@@ -11,27 +12,17 @@ export const dynamic = 'force-dynamic'; // static by default, unless reading the
 export async function GET(request: Request) {
   const siteAlias = new URLSearchParams(new URL(request.url).search).get('siteAlias');
 
-  const authToken = btoa(`${process.env.DUDA_API_USERNAME!}:${process.env.DUDA_API_PASSWORD}`);
-
   const limit = 50;
   let offset = 0;
   let totalResponses = 0;
 
   do {
-    const url = buildRequestUrl(
-      siteAlias!,
-      offset, 
-      limit);
-
-    const dudaRequest = new Request(url, {
+    const dudaRequest = new Request(getEndpointUrl(`/ecommerce/orders?offset=${offset}&limit=${limit}`), {
       method: 'GET',
-      headers: new Headers({
-        Authorization: `Basic ${authToken}`,
-        Accept: 'application/json'
-      }),
+      headers: getRequestHeaders()
     });
 
-    const responseJson: DudaResponse<Order> = await (await fetch(dudaRequest)).json();
+    const responseJson: DudaPagedResponse<Order> = await (await fetch(dudaRequest)).json();
 
     totalResponses = responseJson.total_responses;
 
@@ -92,8 +83,4 @@ async function insertOrdersBatch(orders: Order[]): Promise<boolean> {
   }));
 
   return operations.every(inserted => inserted);
-}
-
-function buildRequestUrl(siteAlias: string, offset: number, limit: number): string {
-  return `${process.env.DUDA_API_URL!}/api/sites/multiscreen/${siteAlias}/ecommerce/orders?offset=${offset}&limit=${limit}`;
 }

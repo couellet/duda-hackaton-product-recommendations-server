@@ -1,4 +1,4 @@
-export default interface DudaResponse<T> {
+export default interface DudaPagedResponse<T> {
     offset?: number;
     limit?: number;
     total_responses: number;

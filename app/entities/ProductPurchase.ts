@@ -1,33 +1,64 @@
-import { VercelPoolClient, sql } from "@vercel/postgres";
+import { QueryResultRow, VercelPoolClient, sql } from "@vercel/postgres";
+import { productClient } from "./Product";
+import Product from "../interfaces/Product";
 
 export interface ProductPurchaseService {
     getByProductId: (productId: string) => Promise<ProductPurchase[]>;
     insert: (db: VercelPoolClient, productPurchase: ProductPurchase) => Promise<void>;
     exists: (orderId: string, productId: string) => Promise<boolean>;
+    frequentlyPurchasedTogether: (productId: string) => Promise<Product[]>;
+}
+
+function mapProductPurchaseRowToProductPurchase(row: QueryResultRow) : ProductPurchase {
+    return {
+        productId: row['product_id'],
+        orderId: row['order_id'],
+        email: row['email'],
+        invoiceNumber: row['invoice_number'],
+        id: row['id'],
+        created: row['created'],
+        currency: row['currency'],
+        productInternalId: row['internal_id'],
+        variationId: row['variation_id'],
+        name: row['name'],
+        total: parseFloat(row['total']),
+        quantity: row['quantity'],
+        unitPrice: parseFloat(row['unit_price']),
+        sku: row['sku'],
+        image: row['image']
+    };
 }
 
 export const productPurchase: ProductPurchaseService = {
     getByProductId: async(productId: string) => {
-        const results = await sql`SELECT *FROM product_purchases WHERE product_id=${productId}`;
-        return results.rows.map<ProductPurchase>(row => {
-            return {
-                productId: row['product_id'],
-                orderId: row['order_id'],
-                email: row['email'],
-                invoiceNumber: row['invoice_number'],
-                id: row['id'],
-                created: row['created'],
-                currency: row['currency'],
-                productInternalId: row['internal_id'],
-                variationId: row['variation_id'],
-                name: row['name'],
-                total: parseFloat(row['total']),
-                quantity: row['quantity'],
-                unitPrice: parseFloat(row['unit_price']),
-                sku: row['sku'],
-                image: row['image']
-            };
-        });
+        const results = await sql`SELECT * FROM product_purchases WHERE product_id=${productId}`;
+
+        return results.rows.map<ProductPurchase>(row => mapProductPurchaseRowToProductPurchase(row));
+    },
+    frequentlyPurchasedTogether: async (productId: string) => {
+        const results = await sql`
+        select product_id, count(order_id) as occurences from product_purchases where order_id in (
+            select distinct order_id from product_purchases where product_id=${productId}
+        ) 
+        and product_id != ${productId}
+        group by product_id
+        order by occurences desc
+        limit 30`;
+
+        const output: Product[] = [];
+
+        for (const row of results.rows) {
+            if (output.length >= 3 || parseInt(row['occurences']) <= 1) break;
+
+            console.log('Row score is', row['occurences'])
+
+            const product = await productClient.getProductById(row['product_id']);
+
+            if (product.status === 'ACTIVE')
+                output.push(product);
+        }
+     
+        return output;
     },
     exists: async (orderId: string, productInternalId: string) => {
         const result = await sql`SELECT * FROM product_purchases WHERE order_id=${orderId} AND internal_id=${productInternalId}`;
