@@ -8,6 +8,7 @@ export interface ProductPurchaseService {
     insert: (db: VercelPoolClient, productPurchase: ProductPurchase) => Promise<void>;
     exists: (orderId: string, productId: string) => Promise<boolean>;
     frequentlyPurchasedTogether: (productId: string) => Promise<DudaProduct[]>;
+    similarProducts: (productId: string) => Promise<DudaProduct[]>;
 }
 
 export const productPurchase: ProductPurchaseService = {
@@ -15,6 +16,11 @@ export const productPurchase: ProductPurchaseService = {
         const results = await sql`SELECT * FROM product_purchases WHERE product_id=${productId}`;
 
         return results.rows.map<ProductPurchase>(row => mapProductPurchaseRowToProductPurchase(row));
+    },
+    similarProducts: async (productId: string) => {
+        const similar = await getSimilarProducts(productId);
+
+        return similar.slice(0, 3);
     },
     frequentlyPurchasedTogether: async (productId: string) => {
         const results = await sql`
@@ -29,7 +35,9 @@ export const productPurchase: ProductPurchaseService = {
         const output: DudaProduct[] = [];
 
         for (const row of results.rows) {
-            if (output.length >= 3 || parseInt(row['occurences']) < 5) break;
+            if (output.length >= 3) break;
+
+            if (parseInt(row['occurences']) < 5) continue;
 
             console.log('Row score is', row['occurences'])
 
@@ -39,14 +47,6 @@ export const productPurchase: ProductPurchaseService = {
                 output.push(product);
         }
 
-        if (output.length < 3) {
-            const similarProducts = await getSimilarProducts(productId);
-
-            for(const product of similarProducts.slice(0, 3 - output.length)) {
-                output.push(product);
-            }
-        }
-     
         return output;
     },
     exists: async (orderId: string, productInternalId: string) => {
