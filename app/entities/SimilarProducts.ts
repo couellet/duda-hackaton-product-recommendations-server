@@ -6,12 +6,9 @@ export const getSimilarProducts = async (productId: string) => {
     const request = new Request(`${url}?productid=${productId}`);
 
     const response = await fetch(request);
-
-    console.log(response.status);
-
     const ids: string[] = await response.json();
 
-    return await Promise.all(ids.map(async id => {
+    return await Promise.all(ids.slice(0, 3).map(async id => {
         return await dudaProductService.getDudaProductById(id);
     }));
 }

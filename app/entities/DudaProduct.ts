@@ -14,7 +14,6 @@ export const dudaProductService: DudaProductService = {
 
         const response = await fetch(request);
         const product: DudaProduct = await response.json();
-
         return product;
     }
 }

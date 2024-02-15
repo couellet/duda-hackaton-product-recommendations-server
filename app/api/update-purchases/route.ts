@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     offset += limit;
 
     await setTimeout(100);
-  } while (offset + limit <= totalResponses);
+  } while (offset <= totalResponses);
 
   return new Response('OK');
 }

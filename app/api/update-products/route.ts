@@ -11,8 +11,6 @@ export async function GET(req: Request) {
     let offset = 0;
     const limit = 5;
     let totalResponses = 0;
-
-
     const dbClient = await db.connect();
 
     do {
@@ -58,7 +56,7 @@ export async function GET(req: Request) {
         }
 
         offset += limit;
-    } while (offset + limit <= totalResponses)
+    } while (offset <= totalResponses)
 
     return new Response("OK");
 }
