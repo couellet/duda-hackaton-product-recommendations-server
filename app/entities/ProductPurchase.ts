@@ -42,7 +42,7 @@ export const productPurchase: ProductPurchaseService = {
         if (output.length < 3) {
             const similarProducts = await getSimilarProducts(productId);
 
-            return similarProducts.slice(0, 3);
+            return similarProducts.slice(0, 3 - output.length);
         }
      
         return output;
