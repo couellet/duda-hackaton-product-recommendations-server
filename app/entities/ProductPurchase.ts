@@ -1,6 +1,7 @@
 import { QueryResultRow, VercelPoolClient, sql } from "@vercel/postgres";
 import { dudaProductService } from "./DudaProduct";
 import DudaProduct from "../interfaces/DudaProduct";
+import { getSimilarProducts } from "./SimilarProducts";
 
 export interface ProductPurchaseService {
     getByProductId: (productId: string) => Promise<ProductPurchase[]>;
@@ -28,7 +29,7 @@ export const productPurchase: ProductPurchaseService = {
         const output: DudaProduct[] = [];
 
         for (const row of results.rows) {
-            if (output.length >= 3 || parseInt(row['occurences']) <= 1) break;
+            if (output.length >= 3 || parseInt(row['occurences']) < 5) break;
 
             console.log('Row score is', row['occurences'])
 
@@ -36,6 +37,12 @@ export const productPurchase: ProductPurchaseService = {
 
             if (product.status === 'ACTIVE')
                 output.push(product);
+        }
+
+        if (output.length < 3) {
+            const similarProducts = await getSimilarProducts(productId);
+
+            return similarProducts.slice(0, 3);
         }
      
         return output;
